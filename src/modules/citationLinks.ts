@@ -118,6 +118,10 @@ function attachTo(doc: Document): void {
     // Only intercept click/auxclick — touching mousedown/up desyncs the
     // reader's text-selection state machine (stuck-selecting bug).
     const holder: EventTarget = win || doc;
+    // Record scroll before the reader can jump (does not prevent/stop -> text
+    // selection stays intact).
+    holder.addEventListener("pointerdown", recordScroll as any, true);
+    holder.addEventListener("mousedown", recordScroll as any, true);
     holder.addEventListener("auxclick", onSuppress as any, true);
     holder.addEventListener("click", onClick as any, true);
 
@@ -398,6 +402,40 @@ function onSuppress(event: Event): void {
   event.stopImmediatePropagation();
 }
 
+/** Scroll position captured at pointerdown, before the reader may jump. */
+let savedScroll: { el: HTMLElement; top: number; left: number } | null = null;
+
+/** On pointerdown over a marked citation, remember the scroll position. */
+function recordScroll(event: Event): void {
+  try {
+    if (!markedSpanAtEvent(event)) return;
+    const doc = (event.target as HTMLElement)?.ownerDocument;
+    const el = doc?.querySelector("#viewerContainer") as HTMLElement | null;
+    if (el) savedScroll = { el, top: el.scrollTop, left: el.scrollLeft };
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Repeatedly restore the saved scroll position to defeat async/smooth nav. */
+function restoreScroll(): void {
+  const s = savedScroll;
+  if (!s) return;
+  const win: any = s.el.ownerDocument?.defaultView;
+  const apply = () => {
+    s.el.scrollTop = s.top;
+    s.el.scrollLeft = s.left;
+  };
+  apply();
+  for (const t of [0, 16, 33, 50, 80, 120, 180, 260, 360]) {
+    win?.setTimeout?.(apply, t);
+  }
+  win?.requestAnimationFrame?.(() => {
+    apply();
+    win?.requestAnimationFrame?.(apply);
+  });
+}
+
 async function onClick(event: Event): Promise<void> {
   try {
     // 1. Fast path: a pre-scanned, pre-matched citation span.
@@ -409,6 +447,9 @@ async function onClick(event: Event): Promise<void> {
       log(`marked citation clicked -> attachment ${att}; opening`);
       const ok = await openAttachmentInNewTab(att, { background: true });
       if (!ok) log("openAttachmentInNewTab returned false");
+      // The reader navigates internally on pointerup (before this click), so
+      // snap the scroll back to where it was at pointerdown to hide the jump.
+      restoreScroll();
       return;
     }
 
