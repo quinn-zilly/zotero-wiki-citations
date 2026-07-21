@@ -173,6 +173,14 @@ function observeTextLayers(doc: Document): void {
           el.querySelectorAll?.(".textLayer")?.forEach((t: Element) =>
             queueScan(t as HTMLElement),
           );
+          // Annotation layer renders separately; re-neutralize its page.
+          const annOnPage =
+            el.classList?.contains("annotationLayer") ||
+            el.querySelector?.(".annotationLayer");
+          if (annOnPage) {
+            const page = el.closest?.(".page") as HTMLElement | null;
+            if (page) queueNeutralize(page);
+          }
         }
       }
     });
@@ -203,6 +211,18 @@ function queueScan(layer: HTMLElement): void {
   }, 150);
 }
 
+/** Debounced page neutralize (annotation layer may mutate as it renders). */
+function queueNeutralize(page: HTMLElement): void {
+  const win: any = page.ownerDocument?.defaultView;
+  if (!win) return;
+  const anyPage = page as any;
+  if (anyPage.__zwcNeutTimer) win.clearTimeout(anyPage.__zwcNeutTimer);
+  anyPage.__zwcNeutTimer = win.setTimeout(() => {
+    anyPage.__zwcNeutTimer = null;
+    neutralizePage(page);
+  }, 100);
+}
+
 async function scanTextLayer(layer: HTMLElement): Promise<void> {
   try {
     // Already processed this rendered layer? (fresh re-renders have no marks)
@@ -228,6 +248,7 @@ async function scanTextLayer(layer: HTMLElement): Promise<void> {
     const cites = findAllCitations(text);
     if (!cites.length) return;
 
+    let marked = 0;
     for (const c of cites) {
       if (!c.year || !c.authors.length) continue;
       const att = await resolveMatch(c.authors, c.year);
@@ -237,12 +258,23 @@ async function scanTextLayer(layer: HTMLElement): Promise<void> {
           const spanLen = e.end - e.start;
           const localStart = Math.max(0, c.start - e.start);
           const localEnd = Math.min(spanLen, c.end - e.start);
-          const markEl = markSpanPortion(e.span, localStart, localEnd, att);
-          if (markEl) neutralizeOverlappingLinks(markEl);
+          if (markSpanPortion(e.span, localStart, localEnd, att)) marked++;
         }
       }
     }
     SCANNED.add(layer);
+
+    // Neutralize link annotations overlapping our marks. The annotation layer
+    // renders separately from the text layer and may arrive later, so retry.
+    if (marked) {
+      const page = layer.closest?.(".page") as HTMLElement | null;
+      if (page) {
+        const win: any = layer.ownerDocument?.defaultView;
+        neutralizePage(page);
+        win?.setTimeout?.(() => neutralizePage(page), 300);
+        win?.setTimeout?.(() => neutralizePage(page), 900);
+      }
+    }
   } catch (e) {
     log("scanTextLayer error:", e);
   }
@@ -289,31 +321,51 @@ function markSpanPortion(
 }
 
 /**
- * Disable any annotation-layer link overlapping a marked citation so its native
- * jump-to-references doesn't fire; the click then falls through to our handler.
+ * Disable annotation-layer links overlapping any marked citation on a page, so
+ * the reader's own jump-to-references (which hit-tests the annotation layer,
+ * possibly on pointerup) finds nothing there. We don't touch events, so text
+ * selection is unaffected. `display:none` also removes it from geometry-based
+ * hit-tests, not just pointer-events ones.
  */
-function neutralizeOverlappingLinks(markEl: HTMLElement): void {
+function neutralizePage(page: HTMLElement): number {
   try {
-    const page = markEl.closest?.(".page") as HTMLElement | null;
-    const ann = page?.querySelector?.(".annotationLayer") as HTMLElement | null;
-    if (!ann) return;
-    const r = markEl.getBoundingClientRect();
-    const links = ann.querySelectorAll("a, .linkAnnotation");
-    for (const l of Array.from(links) as HTMLElement[]) {
+    const ann = page.querySelector?.(".annotationLayer") as HTMLElement | null;
+    if (!ann) return 0;
+    const marks = page.querySelectorAll(`span.${MARK_CLASS}`);
+    if (!marks.length) return 0;
+    const markRects = Array.from(marks).map((m) =>
+      (m as HTMLElement).getBoundingClientRect(),
+    );
+    const links = Array.from(
+      ann.querySelectorAll("a, .linkAnnotation, [data-annotation-id]"),
+    ) as HTMLElement[];
+
+    let disabled = 0;
+    for (const l of links) {
       if ((l as any).dataset?.zwcNeutralized) continue;
       const lr = l.getBoundingClientRect();
-      const disjoint =
-        r.right < lr.left ||
-        r.left > lr.right ||
-        r.bottom < lr.top ||
-        r.top > lr.bottom;
-      if (!disjoint) {
+      if (lr.width === 0 && lr.height === 0) continue;
+      const hit = markRects.some(
+        (r) =>
+          !(
+            r.right < lr.left ||
+            r.left > lr.right ||
+            r.bottom < lr.top ||
+            r.top > lr.bottom
+          ),
+      );
+      if (hit) {
         l.style.pointerEvents = "none";
+        l.style.display = "none";
         (l as any).dataset.zwcNeutralized = "1";
+        disabled++;
       }
     }
+    if (disabled) log(`neutralized ${disabled} link(s) over citations`);
+    return disabled;
   } catch (e) {
-    log("neutralizeOverlappingLinks error:", e);
+    log("neutralizePage error:", e);
+    return 0;
   }
 }
 
