@@ -115,11 +115,10 @@ function attachTo(doc: Document): void {
   try {
     const win = doc.defaultView as (Window & typeof globalThis) | null;
     // Capture on the WINDOW so we run before the reader's document handler.
+    // Only intercept click/auxclick — touching mousedown/up desyncs the
+    // reader's text-selection state machine (stuck-selecting bug).
     const holder: EventTarget = win || doc;
-    // Suppress every event a link could navigate on, for marked citations.
-    for (const t of ["pointerdown", "mousedown", "mouseup", "pointerup", "auxclick"]) {
-      holder.addEventListener(t, onSuppress as any, true);
-    }
+    holder.addEventListener("auxclick", onSuppress as any, true);
     holder.addEventListener("click", onClick as any, true);
 
     injectStyles(doc);
