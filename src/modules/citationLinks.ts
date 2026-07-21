@@ -116,7 +116,10 @@ function attachTo(doc: Document): void {
     const win = doc.defaultView as (Window & typeof globalThis) | null;
     // Capture on the WINDOW so we run before the reader's document handler.
     const holder: EventTarget = win || doc;
-    holder.addEventListener("pointerdown", onPointerDown as any, true);
+    // Suppress every event a link could navigate on, for marked citations.
+    for (const t of ["pointerdown", "mousedown", "mouseup", "pointerup", "auxclick"]) {
+      holder.addEventListener(t, onSuppress as any, true);
+    }
     holder.addEventListener("click", onClick as any, true);
 
     injectStyles(doc);
@@ -337,10 +340,9 @@ async function resolveMatch(
 // Click handling
 // ---------------------------------------------------------------------------
 
-/** Pre-empt the reader's navigation for a marked citation. */
-function onPointerDown(event: Event): void {
-  const span = markedSpan(event);
-  if (!span) return;
+/** Pre-empt the reader's navigation (any pre-click event) for a marked citation. */
+function onSuppress(event: Event): void {
+  if (!markedSpanAtEvent(event)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
 }
@@ -348,7 +350,7 @@ function onPointerDown(event: Event): void {
 async function onClick(event: Event): Promise<void> {
   try {
     // 1. Fast path: a pre-scanned, pre-matched citation span.
-    const span = markedSpan(event);
+    const span = markedSpanAtEvent(event);
     if (span) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -383,13 +385,30 @@ async function onClick(event: Event): Promise<void> {
   }
 }
 
-/** The marked citation span under the event target, if any. */
-function markedSpan(event: Event): HTMLElement | null {
+/**
+ * The marked citation span for an event — by direct target OR by hit-testing
+ * the click point (a link annotation may sit on top of the text span).
+ */
+function markedSpanAtEvent(event: Event): HTMLElement | null {
   const target = event.target as HTMLElement | null;
-  const span = target?.closest?.(
-    `span.${MARK_CLASS}`,
-  ) as HTMLElement | null;
-  return span || null;
+  const direct = target?.closest?.(`span.${MARK_CLASS}`) as HTMLElement | null;
+  if (direct) return direct;
+
+  const me = event as MouseEvent;
+  const doc = target?.ownerDocument;
+  const stack = (doc as any)?.elementsFromPoint?.(
+    me.clientX,
+    me.clientY,
+  ) as Element[] | undefined;
+  if (stack) {
+    for (const el of stack) {
+      const s = (el as HTMLElement).closest?.(
+        `span.${MARK_CLASS}`,
+      ) as HTMLElement | null;
+      if (s) return s;
+    }
+  }
+  return null;
 }
 
 /**
