@@ -488,10 +488,9 @@ function markedSpanAtEvent(event: Event): HTMLElement | null {
 
   const me = event as MouseEvent;
   const doc = target?.ownerDocument;
-  const stack = (doc as any)?.elementsFromPoint?.(
-    me.clientX,
-    me.clientY,
-  ) as Element[] | undefined;
+  const stack = (doc as any)?.elementsFromPoint?.(me.clientX, me.clientY) as
+    | Element[]
+    | undefined;
   if (stack) {
     for (const el of stack) {
       const s = (el as HTMLElement).closest?.(

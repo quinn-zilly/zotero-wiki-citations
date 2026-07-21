@@ -1,5 +1,4 @@
 import { initLocale } from "./utils/locale";
-import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
 import { config } from "../package.json";
 import { registerCitationLinks } from "./modules/citationLinks";
@@ -23,13 +22,9 @@ async function onStartup() {
   addon.data.initialized = true;
 }
 
-async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
+async function onMainWindowLoad(_win: _ZoteroTypes.MainWindow): Promise<void> {
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
-
-  win.MozXULElement.insertFTLIfNeeded(
-    `${addon.data.config.addonRef}-mainWindow.ftl`,
-  );
 }
 
 async function onMainWindowUnload(_win: Window): Promise<void> {
@@ -55,15 +50,7 @@ async function onNotify(
   ztoolkit.log("notify", event, type, ids, extraData);
 }
 
-async function onPrefsEvent(type: string, data: { [key: string]: any }) {
-  switch (type) {
-    case "load":
-      registerPrefsScripts(data.window);
-      break;
-    default:
-      return;
-  }
-}
+async function onPrefsEvent(_type: string, _data: { [key: string]: any }) {}
 
 function onShortcuts(_type: string) {}
 
