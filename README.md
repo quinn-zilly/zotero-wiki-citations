@@ -1,5 +1,8 @@
 # Zotero Wiki Citations
 
+[![CI](https://github.com/quinn-zilly/zotero-wiki-citations/actions/workflows/ci.yml/badge.svg)](https://github.com/quinn-zilly/zotero-wiki-citations/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/github/license/quinn-zilly/zotero-wiki-citations)](LICENSE)
+
 Make in-text citations in the Zotero PDF reader behave like internal wiki
 links. Click an author–year citation such as `(Hulleman & Harackiewicz, 2010)`
 and, if that source is in your Zotero library with an attached PDF, it opens in
