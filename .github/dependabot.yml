@@ -9,6 +9,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    ignore:
+      # 5.2.0 dropped the ZoteroToolkit export this plugin uses; stay on 5.1.x
+      # until the code is migrated. Pinned to ~5.1.4 in package.json.
+      - dependency-name: "zotero-plugin-toolkit"
+        versions: [">=5.2.0"]
     groups:
       all-non-major:
         update-types:

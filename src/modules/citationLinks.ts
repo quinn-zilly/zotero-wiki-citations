@@ -93,7 +93,7 @@ function collectDocs(doc: Document, depth = 0): Document[] {
     return out;
   }
   for (const f of Array.from(frames) as HTMLIFrameElement[]) {
-    let inner: Document | null = null;
+    let inner: Document | null;
     try {
       inner = f.contentDocument;
     } catch {
@@ -380,7 +380,7 @@ async function resolveMatch(
 ): Promise<number | null> {
   const key = `${(authors[0] || "").toLowerCase()}|${year}`;
   if (matchCache.has(key)) return matchCache.get(key)!;
-  let att: number | null = null;
+  let att: number | null;
   try {
     const m = await matchCitation(authors, year);
     att = m ? m.attachmentID : null;
@@ -489,8 +489,7 @@ function markedSpanAtEvent(event: Event): HTMLElement | null {
   const me = event as MouseEvent;
   const doc = target?.ownerDocument;
   const stack = (doc as any)?.elementsFromPoint?.(me.clientX, me.clientY) as
-    | Element[]
-    | undefined;
+    Element[] | undefined;
   if (stack) {
     for (const el of stack) {
       const s = (el as HTMLElement).closest?.(

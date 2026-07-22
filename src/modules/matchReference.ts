@@ -151,7 +151,7 @@ async function findByDOI(
   s.addCondition("libraryID", "is", String(libraryID));
   s.addCondition("itemType", "isNot", "attachment");
   s.addCondition("DOI", "is", doi);
-  let ids: number[] = [];
+  let ids: number[];
   try {
     ids = await s.search();
   } catch {
@@ -166,7 +166,7 @@ async function findByDOI(
   s2.addCondition("libraryID", "is", String(libraryID));
   s2.addCondition("itemType", "isNot", "attachment");
   s2.addCondition("quicksearch-everything", "contains", doi);
-  let ids2: number[] = [];
+  let ids2: number[];
   try {
     ids2 = await s2.search();
   } catch {
@@ -241,7 +241,7 @@ async function fuzzyMatch(
     const kw = topTokens(parsed.title, 3);
     for (const k of kw) s.addCondition("title", "contains", k);
   }
-  let ids: number[] = [];
+  let ids: number[];
   try {
     ids = await s.search();
   } catch {
