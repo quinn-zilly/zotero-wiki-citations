@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs>
+<filter id="paperShadow" x="-30%" y="-30%" width="160%" height="160%">
+<feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#6f4410" flood-opacity="0.20"></feDropShadow>
+</filter>
+</defs>
+<rect x="16" y="16" width="480" height="480" rx="116" fill="#EEF1F4"></rect>
+<rect x="16" y="16" width="480" height="480" rx="116" fill="none" stroke="#D6DCE3" stroke-width="2"></rect>
+<g filter="url(#paperShadow)">
+ <g transform="translate(-4,-4) rotate(-7 201 211)">
+  <rect x="112" y="90" width="178" height="242" rx="26" fill="#FBF8F1" stroke="#9AA6B2" stroke-width="6"></rect>
+  <g transform="translate(138,132)" stroke="#AAB4BF" stroke-width="5" stroke-linecap="round" opacity="0.5"><path fill="none" d="M0 0 h96 M0 26 h120 M0 52 h74"></path></g>
+ </g>
+ <g transform="translate(5,-2) rotate(7 323 239)">
+  <rect x="234" y="118" width="178" height="242" rx="26" fill="#F4F0E6" stroke="#9AA6B2" stroke-width="6"></rect>
+  <g transform="translate(324,154)" stroke="#AAB4BF" stroke-width="5" stroke-linecap="round" opacity="0.5"><path fill="none" d="M0 0 h58 M0 26 h72 M0 52 h44 M0 78 h66"></path></g>
+ </g>
+ <g transform="translate(-3,6) rotate(-2 217 321)">
+  <rect x="128" y="200" width="178" height="242" rx="26" fill="#FEFCF6" stroke="#9AA6B2" stroke-width="6"></rect>
+  <g transform="translate(154,238)" stroke="#AAB4BF" stroke-width="5" stroke-linecap="round" opacity="0.45"><path fill="none" d="M0 0 h118 M0 26 h96 M0 128 h130 M0 154 h84 M0 180 h112"></path></g>
+ </g>
+</g>
+<g stroke="#D8382E" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M150 170 L348 170 L150 322 L348 322"></path>
+ <path d="M330 312 L350 322 L330 332"></path>
+</g>
+</svg>
