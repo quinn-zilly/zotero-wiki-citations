@@ -1,0 +1,67 @@
+name: Bug report
+description: A citation didn't open, opened the wrong PDF, or something broke.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! A **debug log** and the exact citation text are
+        the two most helpful things. See
+        [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#getting-a-debug-log) for
+        how to capture a log.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+      placeholder: I clicked (Smith, 2019) which is in my library, but nothing opened.
+    validations:
+      required: true
+  - type: input
+    id: citation-text
+    attributes:
+      label: Citation text
+      description: The exact in-text citation you clicked.
+      placeholder: (Hulleman & Harackiewicz, 2010)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open PDF '...'
+        2. Click citation '...'
+        3. ...
+    validations:
+      required: false
+  - type: textarea
+    id: log
+    attributes:
+      label: Debug log
+      description: Paste lines containing `[zoterowiki]`. This is rendered as code, no backticks needed.
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: zotero-version
+    attributes:
+      label: Zotero version
+      placeholder: "9.0.6"
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 / macOS 14 / Ubuntu 24.04
+    validations:
+      required: false

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/quinn-zilly/zotero-wiki-citations/discussions
+    about: For usage questions and open-ended ideas, start a discussion instead of an issue.
