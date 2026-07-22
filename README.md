@@ -11,6 +11,10 @@ a new reader tab — no digging through the reference list.
 > Status: early but working. Author–year citations only, for now. See
 > [Roadmap](#roadmap).
 
+## IMPORTANT
+
+This plugin is currently broken. I'm still trying to figure out how to make this all actually work, but I continue to run into bugs.
+
 ## Features
 
 - **Click a citation → open the cited PDF.** Matched citations are highlighted;
