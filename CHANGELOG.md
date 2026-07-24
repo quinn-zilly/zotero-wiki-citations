@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-24
+
+### Fixed
+
+- Reader hooks, poll timers, capture-phase click listeners, and hidden
+  annotation layers were never torn down on plugin shutdown. After a
+  disable/reinstall/reload, ghost handlers kept intercepting reader clicks
+  and left annotation layers hidden, making the reader appear dead ("can't
+  open any PDFs"). Added `unregisterCitationLinks()` teardown, wired into
+  shutdown.
+
 ### Added
 
 - Custom plugin icon: three tilted paper cards behind a red Z of arrows,

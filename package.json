@@ -1,7 +1,7 @@
 {
   "name": "zotero-wiki-citations",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Click in-text citations to open the cited PDF in a new tab, wiki-link style.",
   "config": {
     "addonName": "Zotero Wiki Citations",
