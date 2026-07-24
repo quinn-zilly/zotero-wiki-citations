@@ -29,6 +29,29 @@ const SCANNED = new WeakSet<object>();
 /** Cache: "surname|year" -> attachmentID or null (miss). */
 const matchCache = new Map<string, number | null>();
 
+// ---------------------------------------------------------------------------
+// Teardown bookkeeping
+//
+// Everything below is registered against the reader's own windows/timers.
+// Zotero does NOT unwind these when the plugin is disabled, reinstalled, or
+// hot-reloaded, so without explicit teardown the ghost capture-phase listeners
+// keep calling stopImmediatePropagation()/preventDefault() on reader clicks and
+// leave annotation layers display:none'd -> the reader looks dead ("can't open
+// any PDFs"). unregisterCitationLinks() undoes all of it.
+// ---------------------------------------------------------------------------
+
+/** False after teardown; every registered callback bails when unset. */
+let ACTIVE = false;
+
+/** Poll timers from injectIntoReader ({win, id}) so we can clearInterval them. */
+const POLL_TIMERS = new Set<{ win: any; id: any }>();
+/** MutationObservers created in observeTextLayers. */
+const OBSERVERS = new Set<MutationObserver>();
+/** Event holders we attached capture-phase listeners to (for removal). */
+const HOLDERS = new Set<EventTarget>();
+/** Elements we display:none'd in neutralizePage (for restoration). */
+const NEUTRALIZED = new Set<HTMLElement>();
+
 const MARK_CLASS = "zwc-citation";
 const MARK_ATTR = "zwcAttachment"; // dataset key -> data-zwc-attachment
 
@@ -41,10 +64,12 @@ function log(...args: any[]) {
 // ---------------------------------------------------------------------------
 
 export function registerCitationLinks(pluginID: string): void {
+  ACTIVE = true;
   try {
     Zotero.Reader.registerEventListener(
       "renderToolbar",
       (event: any) => {
+        if (!ACTIVE) return; // ghost callback after teardown -> no-op
         const reader = event?.reader;
         if (reader) injectIntoReader(reader);
       },
@@ -62,15 +87,73 @@ export function registerCitationLinks(pluginID: string): void {
   }
 }
 
+/**
+ * Undo everything registerCitationLinks/injectIntoReader set up in live reader
+ * windows: stop poll timers, disconnect observers, remove capture-phase
+ * listeners, and restore annotation layers we hid. Safe to call multiple times.
+ */
+export function unregisterCitationLinks(): void {
+  ACTIVE = false;
+
+  for (const t of POLL_TIMERS) {
+    try {
+      t.win?.clearInterval?.(t.id);
+    } catch {
+      /* window may be gone */
+    }
+  }
+  POLL_TIMERS.clear();
+
+  for (const obs of OBSERVERS) {
+    try {
+      obs.disconnect();
+    } catch {
+      /* ignore */
+    }
+  }
+  OBSERVERS.clear();
+
+  for (const holder of HOLDERS) {
+    try {
+      holder.removeEventListener("pointerdown", recordScroll as any, true);
+      holder.removeEventListener("mousedown", recordScroll as any, true);
+      holder.removeEventListener("auxclick", onSuppress as any, true);
+      holder.removeEventListener("click", onClick as any, true);
+    } catch {
+      /* window may be gone */
+    }
+  }
+  HOLDERS.clear();
+
+  for (const el of NEUTRALIZED) {
+    try {
+      el.style.pointerEvents = "";
+      el.style.display = "";
+      delete (el as any).dataset.zwcNeutralized;
+    } catch {
+      /* element may be detached */
+    }
+  }
+  NEUTRALIZED.clear();
+
+  log("citation links torn down");
+}
+
 export function injectIntoReader(reader: any): void {
+  if (!ACTIVE) return;
   attachToAllDocs(reader);
   let tries = 0;
   const win: any = reader?._iframeWindow;
-  const timer = win?.setInterval?.(() => {
+  const entry = { win, id: undefined as any };
+  entry.id = win?.setInterval?.(() => {
     tries++;
     attachToAllDocs(reader);
-    if (tries >= 10) win.clearInterval(timer);
+    if (tries >= 10 || !ACTIVE) {
+      win.clearInterval(entry.id);
+      POLL_TIMERS.delete(entry);
+    }
   }, 500);
+  if (entry.id !== undefined) POLL_TIMERS.add(entry);
 }
 
 function attachToAllDocs(reader: any): void {
@@ -124,6 +207,7 @@ function attachTo(doc: Document): void {
     holder.addEventListener("mousedown", recordScroll as any, true);
     holder.addEventListener("auxclick", onSuppress as any, true);
     holder.addEventListener("click", onClick as any, true);
+    HOLDERS.add(holder);
 
     injectStyles(doc);
     observeTextLayers(doc);
@@ -192,6 +276,7 @@ function observeTextLayers(doc: Document): void {
       childList: true,
       subtree: true,
     });
+    OBSERVERS.add(obs);
   } catch (e) {
     log("observeTextLayers failed:", e);
   }
@@ -362,6 +447,7 @@ function neutralizePage(page: HTMLElement): number {
         l.style.pointerEvents = "none";
         l.style.display = "none";
         (l as any).dataset.zwcNeutralized = "1";
+        NEUTRALIZED.add(l);
         disabled++;
       }
     }
@@ -397,6 +483,7 @@ async function resolveMatch(
 
 /** Pre-empt the reader's navigation (any pre-click event) for a marked citation. */
 function onSuppress(event: Event): void {
+  if (!ACTIVE) return;
   if (!markedSpanAtEvent(event)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -437,6 +524,7 @@ function restoreScroll(): void {
 }
 
 async function onClick(event: Event): Promise<void> {
+  if (!ACTIVE) return;
   try {
     // 1. Fast path: a pre-scanned, pre-matched citation span.
     const span = markedSpanAtEvent(event);

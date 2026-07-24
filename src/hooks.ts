@@ -1,7 +1,10 @@
 import { initLocale } from "./utils/locale";
 import { createZToolkit } from "./utils/ztoolkit";
 import { config } from "../package.json";
-import { registerCitationLinks } from "./modules/citationLinks";
+import {
+  registerCitationLinks,
+  unregisterCitationLinks,
+} from "./modules/citationLinks";
 
 async function onStartup() {
   await Promise.all([
@@ -33,6 +36,7 @@ async function onMainWindowUnload(_win: Window): Promise<void> {
 }
 
 function onShutdown(): void {
+  unregisterCitationLinks();
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
   // Remove addon object
